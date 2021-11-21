@@ -11,7 +11,7 @@
 #include <sys/time.h>
    
 #define PORT     8888
-#define MAXLINE 1024 * 1024
+#define MAXLINE 1024 * 32
    
 // Driver code
 int main() {
@@ -43,7 +43,7 @@ int main() {
     }
        
     int len, n;
-    long total = 0;
+    unsigned long total, prev_total = 0;
    
     len = sizeof(cliaddr);  //len is value/resuslt
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
@@ -54,39 +54,38 @@ int main() {
 
     struct timeval t;
     gettimeofday(&t, NULL);
-    unsigned long start_t = t.tv_sec * 1000000ULL + t.tv_usec;
+    unsigned long prev_t = t.tv_sec * 1000000ULL + t.tv_usec;
     unsigned long current_t = t.tv_sec * 1000000ULL + t.tv_usec;
 
     printf("Clocks per s %lu \n", CLOCKS_PER_SEC);
-    printf("Start clock %lu \n", start_t);
+    printf("Start clock %lu \n", prev_t);
 
     unsigned long seq_num, prev_seq_num, missing_packets, prev_missing_packets = 0;
+    unsigned long step = 0;
     while(1)
     {
+        step++;
         n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
                 MSG_WAITALL, ( struct sockaddr *) &cliaddr,
                 &len);
         memcpy(&seq_num, buffer, 4);
         missing_packets += seq_num - prev_seq_num - 1;
-        
-
 
         total += n;
         
-        gettimeofday(&t, 0);
-        if (current_t + 1000000ULL < t.tv_sec * 1000000ULL + t.tv_usec) {
+        if ((step % 1000000) == 0) {
+            gettimeofday(&t, 0);
             current_t = t.tv_sec * 1000000ULL + t.tv_usec;
-            unsigned long times = (current_t - start_t)/ 1000000ULL;
+            unsigned long times = (current_t - prev_t)/ 1000000ULL;
             
-            printf("Total %lu Time %lu Seq %lu PrevSeq %lu Speed %lu MB/s Missing Rate %lu\n", total, times, seq_num, prev_seq_num, total/(times * 1000000), (missing_packets - prev_missing_packets)/(times));
+            printf("Total %lu Time %lu Seq %lu PrevSeq %lu Speed %lu Mbit/s Missing Rate %lu\n", total, times, seq_num, prev_seq_num, (total - prev_total)/(times * 128 * 1024), (missing_packets - prev_missing_packets)/(times));
+            //printf("%lu %lu %lu %lu\n", total, times, seq_num, prev_seq_num);
+            prev_t = current_t;
+            prev_total = total;
             prev_missing_packets = missing_packets;
         }
-
+        
         prev_seq_num = seq_num;
-
-        if (total == 1024ULL * 10000000) {
-            break;
-        }
     }
 
     printf("Total message received %lu \n", total);

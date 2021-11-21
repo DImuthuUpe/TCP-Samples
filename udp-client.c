@@ -11,7 +11,7 @@
 #include <sys/time.h>
 
 #define PORT	 8888
-#define MAXLINE 1024
+#define MAXLINE 1024 * 32
 
 // Driver code
 int main() {
@@ -47,13 +47,15 @@ int main() {
     long total = 0;
 	unsigned long seq_num = 1;
 
-    for (i = 0; i < 10000000; i++) 
+    while (1) 
     {
 		memcpy(buffer, &seq_num, 4);
 	    sendto(sockfd, buffer, MAXLINE, 0, (const struct sockaddr *) &servaddr, sizeof(servaddr));
         seq_num++;
 		total += MAXLINE;
-        gettimeofday(&t, NULL);
+        
+		/*
+		gettimeofday(&t, NULL);
         current_t = t.tv_sec * 1000000ULL + t.tv_usec;
 
         if (perf_t + 1000000ULL < t.tv_sec * 1000000ULL + t.tv_usec) {
@@ -65,6 +67,7 @@ int main() {
         while(t.tv_sec * 1000000ULL + t.tv_usec - current_t < delay_ticks) {
             gettimeofday(&t, NULL);
         }
+		*/
     }
     
     printf("Hello message sent.\n");
