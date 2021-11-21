@@ -63,6 +63,8 @@ int main() {
     unsigned long step = 0;
     while(1)
     {
+
+        gettimeofday(&t, NULL);
         step++;
         n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
                 MSG_WAITALL, ( struct sockaddr *) &cliaddr,
@@ -72,9 +74,11 @@ int main() {
 
         total += n;
         
-        if ((step % 10000) == 0) {
-            gettimeofday(&t, 0);
-            current_t = t.tv_sec * 1000000ULL + t.tv_usec;
+        current_t = t.tv_sec * 1000000ULL + t.tv_usec;
+
+        
+        if ((current_t - prev_t)*1000/(CLOCKS_PER_SEC) > 100) {
+            
             double times = (current_t - prev_t) * 1.0/ 1000000ULL;
             
             printf("Total %lu Time %lf Seq %lu PrevSeq %lu Speed %lf Mbit/s Missing Rate %lf\n", total, times, seq_num, prev_seq_num, (total - prev_total)/(times * 128 * 1024), (missing_packets - prev_missing_packets)/(times));
