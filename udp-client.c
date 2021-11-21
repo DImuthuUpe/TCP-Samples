@@ -36,7 +36,7 @@ int main() {
 	int n, len;
 	int i;
 
-    long delay_ticks = 1;
+    long delay_ticks = 8;
     struct timeval t;
 
     gettimeofday(&t, NULL);
@@ -49,11 +49,18 @@ int main() {
 
     while (1) 
     {
-		memcpy(buffer, &seq_num, 4);
-	    sendto(sockfd, buffer, MAXLINE, 0, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-        seq_num++;
-		total += MAXLINE;
-        
+		gettimeofday(&t, NULL);
+		current_t = t.tv_sec * 1000000ULL + t.tv_usec;
+
+		if (current_t > start_t + delay_ticks) 
+		{
+			memcpy(buffer, &seq_num, 4);
+			sendto(sockfd, buffer, MAXLINE, 0, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+			seq_num++;
+			total += MAXLINE;
+			start_t = current_t;
+		}
+		
 		/*
 		gettimeofday(&t, NULL);
         current_t = t.tv_sec * 1000000ULL + t.tv_usec;

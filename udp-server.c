@@ -1,4 +1,3 @@
-// Server side implementation of UDP client-server model
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -73,12 +72,12 @@ int main() {
 
         total += n;
         
-        if ((step % 1000000) == 0) {
+        if ((step % 10000) == 0) {
             gettimeofday(&t, 0);
             current_t = t.tv_sec * 1000000ULL + t.tv_usec;
-            unsigned long times = (current_t - prev_t)/ 1000000ULL;
+            double times = (current_t - prev_t) * 1.0/ 1000000ULL;
             
-            printf("Total %lu Time %lu Seq %lu PrevSeq %lu Speed %lu Mbit/s Missing Rate %lu\n", total, times, seq_num, prev_seq_num, (total - prev_total)/(times * 128 * 1024), (missing_packets - prev_missing_packets)/(times));
+            printf("Total %lu Time %lf Seq %lu PrevSeq %lu Speed %lf Mbit/s Missing Rate %lf\n", total, times, seq_num, prev_seq_num, (total - prev_total)/(times * 128 * 1024), (missing_packets - prev_missing_packets)/(times));
             //printf("%lu %lu %lu %lu\n", total, times, seq_num, prev_seq_num);
             prev_t = current_t;
             prev_total = total;
