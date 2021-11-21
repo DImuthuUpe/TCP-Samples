@@ -45,18 +45,21 @@ int main() {
     unsigned long perf_t = t.tv_sec * 1000000ULL + t.tv_usec;
 
     long total = 0;
+	unsigned long seq_num = 1;
 
     for (i = 0; i < 10000000; i++) 
     {
+		memcpy(buffer, &seq_num, 4);
 	    sendto(sockfd, buffer, MAXLINE, 0, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-        total += MAXLINE;
+        seq_num++;
+		total += MAXLINE;
         gettimeofday(&t, NULL);
         current_t = t.tv_sec * 1000000ULL + t.tv_usec;
 
         if (perf_t + 1000000ULL < t.tv_sec * 1000000ULL + t.tv_usec) {
             perf_t = t.tv_sec * 1000000ULL + t.tv_usec;
             unsigned long times = (perf_t - start_t)/ 1000000ULL;
-            printf("Total %lu Time %lu Speed %lu MB/s\n", total, times, total/(times * 1000000));
+            printf("Total %lu Time %lu Seq %lu Speed %lu MB/s\n", total, times, seq_num, total/(times * 1000000));
         }
 
         while(t.tv_sec * 1000000ULL + t.tv_usec - current_t < delay_ticks) {

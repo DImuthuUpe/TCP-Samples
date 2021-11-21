@@ -60,19 +60,29 @@ int main() {
     printf("Clocks per s %lu \n", CLOCKS_PER_SEC);
     printf("Start clock %lu \n", start_t);
 
+    unsigned long seq_num, prev_seq_num, missing_packets, prev_missing_packets = 0;
     while(1)
     {
         n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
                 MSG_WAITALL, ( struct sockaddr *) &cliaddr,
                 &len);
+        memcpy(&seq_num, buffer, 4);
+        missing_packets += seq_num - prev_seq_num - 1;
+        
+
+
         total += n;
         
         gettimeofday(&t, 0);
         if (current_t + 1000000ULL < t.tv_sec * 1000000ULL + t.tv_usec) {
             current_t = t.tv_sec * 1000000ULL + t.tv_usec;
             unsigned long times = (current_t - start_t)/ 1000000ULL;
-            printf("Total %lu Time %lu Speed %lu MB/s\n", total, times, total/(times * 1000000));
+            
+            printf("Total %lu Time %lu Seq %lu PrevSeq %lu Speed %lu MB/s Missing Rate %lu\n", total, times, seq_num, prev_seq_num, total/(times * 1000000), (missing_packets - prev_missing_packets)/(times));
+            prev_missing_packets = missing_packets;
         }
+
+        prev_seq_num = seq_num;
 
         if (total == 1024ULL * 10000000) {
             break;
