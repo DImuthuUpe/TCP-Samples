@@ -9,16 +9,56 @@
 #include <netinet/in.h>
 #include <time.h>
 #include <sys/time.h>
+#include <unistd.h>
+#include <pthread.h>
 
 #define PORT	 8888
 #define MAXLINE 1024 * 32
 
+int sockfd;
+struct sockaddr_in	 servaddr;
+volatile unsigned long server_speed = 0;
+volatile unsigned long ts = 0;
+pthread_rwlock_t srv_speed_rwlock;
+
+void *controller_thread(void *vargp)
+{
+	char buffer[MAXLINE];
+	int len, n;
+	
+    while(1)
+    {
+        n = recvfrom(sockfd, (char *)buffer, MAXLINE,
+				MSG_WAITALL, (struct sockaddr *) &servaddr,
+				&len);
+
+		pthread_rwlock_wrlock(&srv_speed_rwlock);
+
+        memcpy(&server_speed, buffer, 4);
+		// Calulate the expected colck cycle delay to next packet send
+		ts = (1024 * 32 * CLOCKS_PER_SEC) / (1024 * 128 * server_speed);
+
+		// Add bias to the clock delay to avoid badnwidth shrinking
+		if (ts > 1) {
+			ts = ts - 1;
+		}
+
+		pthread_rwlock_unlock(&srv_speed_rwlock);
+		
+
+		printf("Server speed : %lu ts %d\n", server_speed, ts);
+    }
+    return NULL;
+}
+
 // Driver code
 int main() {
-	int sockfd;
+	
+	pthread_rwlock_init(&srv_speed_rwlock, NULL);
+
 	char buffer[MAXLINE];
 	
-	struct sockaddr_in	 servaddr;
+	
 
 	// Creating socket file descriptor
 	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
@@ -47,6 +87,10 @@ int main() {
 	unsigned long total, prev_total = 0;
 	unsigned long seq_num = 1;
 
+	pthread_t thread_id;
+    pthread_create(&thread_id, NULL, controller_thread, NULL);
+
+
     while (1) 
     {
 		gettimeofday(&t, NULL);
@@ -54,6 +98,11 @@ int main() {
 
 		if (current_t > start_t + delay_ticks) 
 		{
+			pthread_rwlock_rdlock(&srv_speed_rwlock);
+			
+			delay_ticks = ts;
+
+			pthread_rwlock_unlock(&srv_speed_rwlock);
 			memcpy(buffer, &seq_num, 4);
 			sendto(sockfd, buffer, MAXLINE, 0, (const struct sockaddr *) &servaddr, sizeof(servaddr));
 			seq_num++;
@@ -73,12 +122,6 @@ int main() {
     }
     
     printf("Hello message sent.\n");
-		
-	n = recvfrom(sockfd, (char *)buffer, MAXLINE,
-				MSG_WAITALL, (struct sockaddr *) &servaddr,
-				&len);
-	buffer[n] = '\0';
-	printf("Server : %s\n", buffer);
 
 	close(sockfd);
 	return 0;

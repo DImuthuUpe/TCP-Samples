@@ -8,17 +8,52 @@
 #include <netinet/in.h>
 #include <time.h>
 #include <sys/time.h>
+#include <unistd.h>
+#include <pthread.h>
    
 #define PORT     8888
 #define MAXLINE 1024 * 32
    
+int sockfd;
+struct sockaddr_in servaddr, cliaddr;
+char *hello = "Hello from server";
+
+volatile unsigned long total = 0;
+pthread_rwlock_t total_rwlock;
+
+void *controller_thread(void *vargp)
+{
+    char buffer[4];
+    unsigned long speed = 12;
+    unsigned long prev_total = 0;
+    while(1)
+    {
+
+        int len = sizeof(cliaddr);
+        sleep(1);
+        printf("Printing from Controller Thread \n");
+
+        pthread_rwlock_rdlock(&total_rwlock);
+        speed = (total - prev_total)/(128 * 1024);
+        prev_total = total;
+        pthread_rwlock_unlock(&total_rwlock);
+
+
+        memcpy(buffer, &speed, 4);
+        sendto(sockfd, buffer, 4, 
+        0, (const struct sockaddr *) &cliaddr, len);
+    }
+    return NULL;
+}
+
+
 // Driver code
 int main() {
-    int sockfd;
+    
+    pthread_rwlock_init(&total_rwlock, NULL);
+
     char buffer[MAXLINE];
-    char *hello = "Hello from server";
-    struct sockaddr_in servaddr, cliaddr;
-       
+    
     // Creating socket file descriptor
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("socket creation failed");
@@ -42,7 +77,7 @@ int main() {
     }
        
     int len, n;
-    unsigned long total, prev_total = 0;
+    unsigned long prev_total = 0;
    
     len = sizeof(cliaddr);  //len is value/resuslt
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
@@ -50,6 +85,10 @@ int main() {
                 &len);
         total += n;
     
+
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, controller_thread, NULL);
+
 
     struct timeval t;
     gettimeofday(&t, NULL);
@@ -72,7 +111,9 @@ int main() {
         memcpy(&seq_num, buffer, 4);
         missing_packets += seq_num - prev_seq_num - 1;
 
+        pthread_rwlock_wrlock(&total_rwlock);
         total += n;
+        pthread_rwlock_unlock(&total_rwlock);
         
         current_t = t.tv_sec * 1000000ULL + t.tv_usec;
 
@@ -92,13 +133,6 @@ int main() {
     }
 
     printf("Total message received %lu \n", total);
-    
-    
-    sendto(sockfd, (const char *)hello, strlen(hello), 
-        0, (const struct sockaddr *) &cliaddr,
-            len);
-    //printf("Total %lu \n", total);
-    printf("Hello message sent.\n"); 
        
     return 0;
 }
