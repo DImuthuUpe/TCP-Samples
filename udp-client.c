@@ -36,15 +36,15 @@ int main() {
 	int n, len;
 	int i;
 
-    long delay_ticks = 8;
+    long delay_ticks = 2;
     struct timeval t;
 
     gettimeofday(&t, NULL);
     unsigned long start_t = t.tv_sec * 1000000ULL + t.tv_usec;
     unsigned long current_t = t.tv_sec * 1000000ULL + t.tv_usec;
-    unsigned long perf_t = t.tv_sec * 1000000ULL + t.tv_usec;
+    unsigned long prev_t = t.tv_sec * 1000000ULL + t.tv_usec;
 
-    long total = 0;
+	unsigned long total, prev_total = 0;
 	unsigned long seq_num = 1;
 
     while (1) 
@@ -61,20 +61,15 @@ int main() {
 			start_t = current_t;
 		}
 		
-		/*
-		gettimeofday(&t, NULL);
-        current_t = t.tv_sec * 1000000ULL + t.tv_usec;
-
-        if (perf_t + 1000000ULL < t.tv_sec * 1000000ULL + t.tv_usec) {
-            perf_t = t.tv_sec * 1000000ULL + t.tv_usec;
-            unsigned long times = (perf_t - start_t)/ 1000000ULL;
-            printf("Total %lu Time %lu Seq %lu Speed %lu MB/s\n", total, times, seq_num, total/(times * 1000000));
+		if ((current_t - prev_t)*1000/(CLOCKS_PER_SEC) > 100) {
+            
+            double times = (current_t - prev_t) * 1.0/ 1000000ULL;
+            
+            printf("Total %lu Time %lf Seq %lu Speed %lf Mbit/s\n", total, times, seq_num, (total - prev_total)/(times * 128 * 1024));
+            //printf("%lu %lu %lu %lu\n", total, times, seq_num, prev_seq_num);
+            prev_t = current_t;
+            prev_total = total;
         }
-
-        while(t.tv_sec * 1000000ULL + t.tv_usec - current_t < delay_ticks) {
-            gettimeofday(&t, NULL);
-        }
-		*/
     }
     
     printf("Hello message sent.\n");
