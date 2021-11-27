@@ -36,7 +36,7 @@ void *controller_thread(void *vargp)
 
         memcpy(&server_speed, buffer, 4);
 		// Calulate the expected colck cycle delay to next packet send
-		ts = (1024 * 32 * CLOCKS_PER_SEC) / (1024 * 128 * server_speed);
+		ts = (MAXLINE * CLOCKS_PER_SEC) / (1024 * 128 * server_speed);
 
 		// Add bias to the clock delay to avoid badnwidth shrinking
 		if (ts > 1) {
