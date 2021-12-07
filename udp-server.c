@@ -12,12 +12,11 @@
 #include <pthread.h>
    
 #define PORT     8888
-#define MAXLINE 1024 * 32
+#define MAXLINE 1024 * 64 - 1
 #define RINGSIZE 64
 
 int sockfd;
 struct sockaddr_in servaddr, cliaddr;
-char *hello = "Hello from server";
 
 volatile unsigned long total, missing_packets = 0;
 volatile unsigned long seq_num, prev_seq_num = 0;
@@ -37,8 +36,6 @@ struct Nack {
     char confirmed;
     struct Nack *next;
 };
-
-
 
 int get_next_ring_pos(int current_pos, unsigned long current_seq_num, unsigned long next_seq_num) {
     if (current_pos < RINGSIZE -1) 
